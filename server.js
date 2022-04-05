@@ -8,37 +8,22 @@ const serverPort = 3000,
     WebSocket = require("ws"),
     websocketServer = new WebSocket.Server({ server });
 
+const customClients = new Map();
+
 class CustomClient {
-    constructor(message) {
-        this._message = message;
+    constructor() {
+        this._interval = undefined;
     }
 
-    async subscribe(client) {
-        if (this._message === "subscribe") {
-            await setInterval(() => { client.send(`subscribed`); }, 4000)
-        }
+    subscribe(client) {
+        client.send(` { "type": "Subscribed" }`);
+        this._interval = setInterval(() => { client.send(`{ "type": "heartbeat", "date":${new Date().toISOString()} }`); }, 1000);
     }
 
-    async unsubscribe(client) {
-        if (this._message === "unsubscribe") {
-            await setInterval(() => { client.send(`unsubscribed`); }, 8000)
-        }
+    unSubscribe() {
+        clearInterval(this._interval);
     }
-
-    get message() {
-        return this._message;
-    }
-
-    set message(message) {
-        this._message = message;
-    }
-
 }
-
-let customClient = new CustomClient();
-
-// Object.seal(customClient);
-
 
 
 //when a websocket connection is established
@@ -47,22 +32,27 @@ websocketServer.on('connection', (webSocketClient) => {
     webSocketClient.send('{ "connection" : "ok"}');
     //when a message is received
     webSocketClient.on('message', (message) => {
-        if (message.toString() === "subscribe" || message.toString() === "unsubscribe") {
-            customClient.message = message.toString();
+        console.log("The message received:", message.toString());
+
+        let customClient;
+        if (customClients.get(webSocketClient)) {
+            console.log("Object present");
+            customClient = customClients.get(webSocketClient);
+        } else {
+            console.log("Object not present");
+            customClient = new CustomClient();
+            customClients.set(webSocketClient, customClient);
         }
 
-        //for each websocket client
-        websocketServer
-            .clients
-            .forEach(async (client) => {
-                console.log(message.toString());
-                if (message.toString() === "subscribe") { await customClient.subscribe(client); }
-                else if (message.toString() === "unsubscribe") { await customClient.unsubscribe(client); }
-                else { await client.send(`{"type": "error"}`); }
-                if (customClient.message === "subscribe") {
-                    await setInterval(() => { client.send(`{ "message" : "heartBeat", "date":${new Date().toISOString()} }`); }, 1000);
-                }
-            });
+        if (message.toString() === "subscribe") {
+            setTimeout(() => customClient.subscribe(webSocketClient), 4000);
+        } else {
+            setTimeout(() => {
+                webSocketClient.send(` { "type": "Un subscribed" } `);
+                customClient.unSubscribe(webSocketClient);
+            }, 8000
+            );
+        }
     });
 });
 

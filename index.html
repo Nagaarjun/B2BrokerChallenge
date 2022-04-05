@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<head>
+    <title>websocket example</title>
+</head>
+
+<body>
+    <div id="abc"></div>
+    <script>
+        function WebSocketTest() {
+
+            if ("WebSocket" in window) {
+                alert("WebSocket is supported by your Browser!");
+
+                // Let us open a web socket
+                var ws = new WebSocket("ws://localhost:3000");
+
+                ws.onopen = function () {
+
+                    // Web Socket is connected, send data using send()
+                    // ws.send("subscribe");
+                    setTimeout(() => { ws.send("subscribe"); }, 0)
+                    setTimeout(() => { ws.send("unsubscribe"); }, 10000)
+                    // console.log("Message is sent...");
+                };
+
+                ws.onmessage = function (evt) {
+                    var received_msg = evt.data;
+                    console.log("Received Messge", received_msg);
+                };
+
+                ws.onclose = function () {
+
+                    // websocket is closed.
+                    console.log("Connection is closed...");
+                };
+            } else {
+                alert("WebSocket NOT supported by your Browser!");
+            }
+        }
+        WebSocketTest();
+    </script>
+</body>
